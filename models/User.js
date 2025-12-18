@@ -7,10 +7,7 @@ const userSchema = new mongoose.Schema({
   referralCount: { type: Number, default: 0 },
   referralCode: { type: String, unique: true },
   referrerId: { type: Number, default: null },
-  habits: { type: Array, default: [] },
   theme: { type: String, default: 'midnight' },
-  sleepData: { type: Object, default: {} },  // Uyqu ma'lumotlari
-  trackerData: { type: Object, default: {} },
   createdAt: { type: Date, default: Date.now }
 });
 
