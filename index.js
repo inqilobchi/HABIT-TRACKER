@@ -46,23 +46,24 @@ mongoose.connect(process.env.MONGO_URI, {
 }).then(() => console.log('MongoDB ulandi')).catch(err => console.error(err));
 
 // API Endpointlar
-app.get('/api/user/:userId', async (req, res) => {
-  try {
-    const user = await User.findOne({ userId: parseInt(req.params.userId) });
-    const habit = await Habit.findOne({ userId: parseInt(req.params.userId) });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({
-      userPlan: user.plan,
-      stars: user.stars,
-      referralCount: user.referralCount,
-      referralCode: user.referralCode,
-      habits: habit ? habit.habits : [],
-      theme: user.theme || 'midnight'
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+     app.get('/api/user/:userId', async (req, res) => {
+       try {
+         const user = await User.findOne({ userId: parseInt(req.params.userId) });
+         const habit = await Habit.findOne({ userId: parseInt(req.params.userId) });
+         if (!user) return res.status(404).json({ error: 'User not found' });
+         res.json({
+           userPlan: user.plan,
+           stars: user.stars,
+           referralCount: user.referralCount,
+           referralCode: user.referralCode,
+           habits: habit ? habit.habits : [],
+           trackerData: habit ? habit.trackerData : {},  // Qo'shildi
+           theme: user.theme || 'midnight'
+         });
+       } catch (err) {
+         res.status(500).json({ error: err.message });
+       }
+     });
 
 app.post('/api/user/:userId', async (req, res) => {
   console.log('POST /api/user/:userId called with:', req.body);  // Qo'shildi
