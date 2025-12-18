@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
   habits: { type: Array, default: [] },
   theme: { type: String, default: 'midnight' },
   sleepData: { type: Object, default: {} },  // Uyqu ma'lumotlari
+  trackerData: { type: Object, default: {} },
   createdAt: { type: Date, default: Date.now }
 });
 
