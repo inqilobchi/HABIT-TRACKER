@@ -5,6 +5,9 @@ const express = require('express');
 const cors = require('cors');
 const User = require('./models/User');
 const Payment = require('./models/Payment');
+const Habit = require('./models/Habit');
+const Sleep = require('./models/Sleep');
+
 const app = express();
 const ADMIN_ID = parseInt(process.env.ADMIN_ID);
 const WEB_APP_URL = process.env.WEB_APP_URL;
@@ -14,20 +17,18 @@ const bot = new TelegramBot(process.env.BOT_TOKEN);
 const WEBHOOK_URL = `${process.env.RENDER_URL}/bot${process.env.BOT_TOKEN}`;
 
 bot.setWebHook(WEBHOOK_URL);
-// Middleware'larni webhook route'dan OLDIN joylashtiring
-app.use(express.json({ limit: '10mb' }));  // Limitni 10MB ga oshirish
+app.use(express.json({ limit: '10mb' }));
 app.use(cors({
-  origin: '*',  // Barcha origin'larni ruxsat berish (test uchun)
+  origin: '*',
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
-app.options('*', cors());  // Saqlang
-// Webhook callback route (middleware'lardan keyin)
+app.options('*', cors());
+
 app.post(`/bot${process.env.BOT_TOKEN}`, (req, res) => {
     try {
-        // Test uchun: req.body ni tekshiring (production'da olib tashlang)
         if (!req.body) {
-            console.error('req.body is undefined');
+            console.error('req.body is empty');
             res.sendStatus(200);
             return;
         }
@@ -35,27 +36,27 @@ app.post(`/bot${process.env.BOT_TOKEN}`, (req, res) => {
         res.sendStatus(200);
     } catch (error) {
         console.error('Webhook processing error:', error);
-        res.sendStatus(200); // Telegram'ga muvaffaqiyatli qabul qilindi deb bildirish
+        res.sendStatus(200);
     }
 });
-// MongoDB ulanish
+
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => console.log('MongoDB ulandi')).catch(err => console.error(err));
 
 // API Endpointlar
-// Foydalanuvchi ma'lumotlarini olish
 app.get('/api/user/:userId', async (req, res) => {
   try {
     const user = await User.findOne({ userId: parseInt(req.params.userId) });
+    const habit = await Habit.findOne({ userId: parseInt(req.params.userId) });
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({
       userPlan: user.plan,
       stars: user.stars,
       referralCount: user.referralCount,
       referralCode: user.referralCode,
-      habits: user.habits || [],
+      habits: habit ? habit.habits : [],
       theme: user.theme || 'midnight'
     });
   } catch (err) {
@@ -63,13 +64,17 @@ app.get('/api/user/:userId', async (req, res) => {
   }
 });
 
-// Foydalanuvchi ma'lumotlarini saqlash
 app.post('/api/user/:userId', async (req, res) => {
   try {
     const { userPlan, stars, referralCount, habits, theme } = req.body;
     const user = await User.findOneAndUpdate(
       { userId: parseInt(req.params.userId) },
-      { plan: userPlan, stars, referralCount, habits, theme },
+      { plan: userPlan, stars, referralCount, theme },
+      { new: true, upsert: true }
+    );
+    await Habit.findOneAndUpdate(
+      { userId: parseInt(req.params.userId) },
+      { habits },
       { new: true, upsert: true }
     );
     res.json({ success: true, user });
@@ -78,16 +83,15 @@ app.post('/api/user/:userId', async (req, res) => {
   }
 });
 
-// Uyqu ma'lumotlarini saqlash
 app.post('/api/sleep/:userId', async (req, res) => {
   try {
     const { sleepData } = req.body;
-    const user = await User.findOneAndUpdate(
+    await Sleep.findOneAndUpdate(
       { userId: parseInt(req.params.userId) },
       { sleepData },
       { new: true, upsert: true }
     );
-    res.json({ success: true, user });
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -181,26 +185,6 @@ bot.on('callback_query', async (query) => {
     const message = '❓ Yordam:\n\n🚀 Boshlash: Mini app-ni ochadi (odatlar, yulduzlar, statistika).\n\n🎁 Referral: Do\'stlarni taklif qilish, har do\'st uchun 1000 ⭐. 20 ta - Standart, 40 ta - Premium.\n\n💳 To\'lovlar: Tarif sotib olish. Chek yuboring, admin qabul qilsa tarif ishga tushadi.\n\nMini app-da:\n- Odat qo\'shish, bajarish, streak ko\'rish.\n- Uyqu va progress tracking.\n- Mavzular va tariflar.\n\nSavollar bo\'lsa, admin-ga murojaat qiling.';
     bot.sendMessage(userId, message);
   } else if (data === 'buy_standard') {
-    bot.sendMessage(userId, 'Standart tarif uchun to\'lov qiling va chek rasmini yuboring. Admin qabul qilsa, tarif faollashadi.');
-  } else if (data === 'buy_premium') {
-    bot.sendMessage(userId, 'Premium tarif uchun to\'lov qiling va chek rasmini yuboring. Admin qabul qilsa, tarif faollashadi.');
-  } else if (data === 'claim_standard') {
-    if (user.referralCount >= 20 && user.plan === 'free') {
-      user.plan = 'standard';
-      await user.save();
-      bot.sendMessage(userId, '✅ Standart tarif faollashtirildi! Mini app-da yangilanishni ko\'ring.');
-    } else {
-      bot.sendMessage(userId, '❌ Referral soni yetmaydi.');
-    }
-  } else if (data === 'claim_premium') {
-    if (user.referralCount >= 40) {
-      user.plan = 'premium';
-      await user.save();
-      bot.sendMessage(userId, '✅ Premium tarif faollashtirildi! Mini app-da yangilanishni ko\'ring.');
-    } else {
-      bot.sendMessage(userId, '❌ Referral soni yetmaydi.');
-    }
-  } else if (data === 'buy_standard') {
     const amount = 5000;
     const message = `💳 Standart tarif uchun to'lov:\n\nKarta raqami: 9860080159543810\nMiqdori: ${amount} so'm\n\nTo'lov qiling va chekning screenshot-ini yuboring.`;
     const keyboard = {
@@ -210,7 +194,6 @@ bot.on('callback_query', async (query) => {
     };
     bot.sendMessage(userId, message, { reply_markup: keyboard });
 
-    // Pending payment yaratish
     await Payment.create({ userId, plan: 'standard', amount });
   } else if (data === 'buy_premium') {
     const amount = 10000;
@@ -222,10 +205,8 @@ bot.on('callback_query', async (query) => {
     };
     bot.sendMessage(userId, message, { reply_markup: keyboard });
 
-    // Pending payment yaratish
     await Payment.create({ userId, plan: 'premium', amount });
-} else if (data === 'cancel_payment') {
-    // Pending payment-ni bekor qilish
+  } else if (data === 'cancel_payment') {
     await Payment.findOneAndUpdate({ userId, status: 'pending' }, { status: 'rejected' });
     bot.sendMessage(userId, '❌ To\'lov bekor qilindi.');
   } else if (data.startsWith('approve_payment_')) {
@@ -235,7 +216,6 @@ bot.on('callback_query', async (query) => {
       payment.status = 'approved';
       await payment.save();
 
-      // User plan-ini yangilash
       const user = await User.findOne({ userId: payment.userId });
       if (user) {
         user.plan = payment.plan;
@@ -245,7 +225,7 @@ bot.on('callback_query', async (query) => {
       bot.sendMessage(payment.userId, `✅ ${payment.plan} tarifi faollashtirildi! Mini app-da yangilanishni ko'ring.`);
       bot.sendMessage(ADMIN_ID, `✅ To'lov tasdiqlandi: ${payment.plan} uchun ${payment.amount} so'm.`);
     }
-  }  else if (data.startsWith('reject_payment_')) {
+  } else if (data.startsWith('reject_payment_')) {
     const paymentId = data.split('_')[2];
     const payment = await Payment.findById(paymentId);
     if (payment && payment.status === 'pending') {
@@ -265,13 +245,11 @@ bot.on('photo', async (msg) => {
   const userId = msg.from.id;
   const photo = msg.photo[msg.photo.length - 1];
 
-  // Pending payment tekshirish
   const pendingPayment = await Payment.findOne({ userId, status: 'pending' });
   if (!pendingPayment) {
     return bot.sendMessage(userId, 'Avval to\'lov jarayonini boshlang.');
   }
 
-  // Admin-ga yuborish
   const caption = `To'lov cheki: ${pendingPayment.plan} (${pendingPayment.amount} so'm)\nUser: ${userId}`;
   const keyboard = {
     inline_keyboard: [
