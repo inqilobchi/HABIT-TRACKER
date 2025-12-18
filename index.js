@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const express = require('express');
 const cors = require('cors');
 const User = require('./models/User');
+const Payment = require('./models/Payment');
 
 // Bot va konfiguratsiya
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
@@ -177,6 +178,61 @@ bot.on('callback_query', async (query) => {
     } else {
       bot.sendMessage(userId, '❌ Referral soni yetmaydi.');
     }
+  } else if (data === 'buy_standard') {
+    const amount = 5000;
+    const message = `💳 Standart tarif uchun to'lov:\n\nKarta raqami: 9860080159543810\nMiqdori: ${amount} so'm\n\nTo'lov qiling va chekning screenshot-ini yuboring.`;
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: '❌ Bekor qilish', callback_data: 'cancel_payment' }]
+      ]
+    };
+    bot.sendMessage(userId, message, { reply_markup: keyboard });
+
+    // Pending payment yaratish
+    await Payment.create({ userId, plan: 'standard', amount });
+  } else if (data === 'buy_premium') {
+    const amount = 10000;
+    const message = `💳 Premium tarif uchun to'lov:\n\nKarta raqami: 9860080159543810\nMiqdori: ${amount} so'm\n\nTo'lov qiling va chekning screenshot-ini yuboring.`;
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: '❌ Bekor qilish', callback_data: 'cancel_payment' }]
+      ]
+    };
+    bot.sendMessage(userId, message, { reply_markup: keyboard });
+
+    // Pending payment yaratish
+    await Payment.create({ userId, plan: 'premium', amount });
+} else if (data === 'cancel_payment') {
+    // Pending payment-ni bekor qilish
+    await Payment.findOneAndUpdate({ userId, status: 'pending' }, { status: 'rejected' });
+    bot.sendMessage(userId, '❌ To\'lov bekor qilindi.');
+  } else if (data.startsWith('approve_payment_')) {
+    const paymentId = data.split('_')[2];
+    const payment = await Payment.findById(paymentId);
+    if (payment && payment.status === 'pending') {
+      payment.status = 'approved';
+      await payment.save();
+
+      // User plan-ini yangilash
+      const user = await User.findOne({ userId: payment.userId });
+      if (user) {
+        user.plan = payment.plan;
+        await user.save();
+      }
+
+      bot.sendMessage(payment.userId, `✅ ${payment.plan} tarifi faollashtirildi! Mini app-da yangilanishni ko'ring.`);
+      bot.sendMessage(ADMIN_ID, `✅ To'lov tasdiqlandi: ${payment.plan} uchun ${payment.amount} so'm.`);
+    }
+  }  else if (data.startsWith('reject_payment_')) {
+    const paymentId = data.split('_')[2];
+    const payment = await Payment.findById(paymentId);
+    if (payment && payment.status === 'pending') {
+      payment.status = 'rejected';
+      await payment.save();
+
+      bot.sendMessage(payment.userId, '❌ To\'lov bekor qilindi. Qayta urinib ko\'ring.');
+      bot.sendMessage(ADMIN_ID, `❌ To'lov bekor qilindi: ${payment.plan} uchun ${payment.amount} so'm.`);
+    }
   }
 
   bot.answerCallbackQuery(query.id);
@@ -187,11 +243,23 @@ bot.on('photo', async (msg) => {
   const userId = msg.from.id;
   const photo = msg.photo[msg.photo.length - 1];
 
-  await bot.sendPhoto(ADMIN_ID, photo.file_id, {
-    caption: `To'lov cheki: User ${userId}\nQabul qilish uchun /approve_${userId}_standard yoki /approve_${userId}_premium yozing.`
-  });
+  // Pending payment tekshirish
+  const pendingPayment = await Payment.findOne({ userId, status: 'pending' });
+  if (!pendingPayment) {
+    return bot.sendMessage(userId, 'Avval to\'lov jarayonini boshlang.');
+  }
 
-  bot.sendMessage(userId, 'Chek yuborildi! Admin tekshiradi va tarifni faollashtiradi.');
+  // Admin-ga yuborish
+  const caption = `To'lov cheki: ${pendingPayment.plan} (${pendingPayment.amount} so'm)\nUser: ${userId}`;
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: '✅ Tasdiqlash', callback_data: `approve_payment_${pendingPayment._id}` }],
+      [{ text: '❌ Bekor qilish', callback_data: `reject_payment_${pendingPayment._id}` }]
+    ]
+  };
+
+  await bot.sendPhoto(ADMIN_ID, photo.file_id, { caption, reply_markup: keyboard });
+  bot.sendMessage(userId, 'Chek yuborildi! Admin tekshiradi.');
 });
 
 // Admin kommandalari
