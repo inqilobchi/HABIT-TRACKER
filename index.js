@@ -96,6 +96,47 @@ app.post('/api/sleep/:userId', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+app.get('/api/sleep/:userId', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const sleep = await Sleep.findOne({ userId });
+    res.json({
+      sleepData: sleep ? sleep.sleepData : {}
+    });
+  } catch (err) {
+    console.error('GET /api/sleep error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+app.get('/api/habit/:userId', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const habit = await Habit.findOne({ userId });
+    res.json({
+      habits: habit ? habit.habits : [],
+      trackerData: habit ? habit.trackerData : {}
+    });
+  } catch (err) {
+    console.error('GET /api/habit error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/habit/:userId', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const { habits, trackerData } = req.body;
+    await Habit.findOneAndUpdate(
+      { userId },
+      { habits, trackerData },
+      { new: true, upsert: true }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('POST /api/habit error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Server ishga tushirish
 const PORT = process.env.PORT || 3000;
