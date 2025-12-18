@@ -65,6 +65,7 @@ app.get('/api/user/:userId', async (req, res) => {
 });
 
 app.post('/api/user/:userId', async (req, res) => {
+  console.log('POST /api/user/:userId called with:', req.body);  // Qo'shildi
   try {
     const { userPlan, stars, referralCount, habits, trackerData, theme } = req.body;
     const user = await User.findOneAndUpdate(
@@ -77,13 +78,15 @@ app.post('/api/user/:userId', async (req, res) => {
       { habits, trackerData },
       { new: true, upsert: true }
     );
+    console.log('User and Habit saved successfully');  // Qo'shildi
     res.json({ success: true, user });
   } catch (err) {
+    console.error('POST /api/user error:', err);  // Qo'shildi
     res.status(500).json({ error: err.message });
   }
 });
-
 app.post('/api/sleep/:userId', async (req, res) => {
+  console.log('POST /api/sleep/:userId called with:', req.body);  // Qo'shildi
   try {
     const { sleepData } = req.body;
     await Sleep.findOneAndUpdate(
@@ -91,8 +94,10 @@ app.post('/api/sleep/:userId', async (req, res) => {
       { sleepData },
       { new: true, upsert: true }
     );
+    console.log('Sleep saved successfully');  // Qo'shildi
     res.json({ success: true });
   } catch (err) {
+    console.error('POST /api/sleep error:', err);  // Qo'shildi
     res.status(500).json({ error: err.message });
   }
 });
@@ -123,6 +128,7 @@ app.get('/api/habit/:userId', async (req, res) => {
 });
 
 app.post('/api/habit/:userId', async (req, res) => {
+  console.log('POST /api/habit/:userId called with:', req.body);  // Qo'shildi
   try {
     const userId = parseInt(req.params.userId);
     const { habits, trackerData } = req.body;
@@ -131,9 +137,10 @@ app.post('/api/habit/:userId', async (req, res) => {
       { habits, trackerData },
       { new: true, upsert: true }
     );
+    console.log('Habit saved successfully');  // Qo'shildi
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /api/habit error:', err);
+    console.error('POST /api/habit error:', err);  // Qo'shildi
     res.status(500).json({ error: err.message });
   }
 });
