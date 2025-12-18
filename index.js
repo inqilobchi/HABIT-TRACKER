@@ -5,6 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const User = require('./models/User');
 const Payment = require('./models/Payment');
+const app = express();
 const ADMIN_ID = parseInt(process.env.ADMIN_ID);
 const WEB_APP_URL = process.env.WEB_APP_URL;
 
