@@ -66,7 +66,7 @@ app.get('/api/user/:userId', async (req, res) => {
 
 app.post('/api/user/:userId', async (req, res) => {
   try {
-    const { userPlan, stars, referralCount, habits, theme } = req.body;
+    const { userPlan, stars, referralCount, habits, trackerData, theme } = req.body;
     const user = await User.findOneAndUpdate(
       { userId: parseInt(req.params.userId) },
       { plan: userPlan, stars, referralCount, theme },
@@ -74,7 +74,7 @@ app.post('/api/user/:userId', async (req, res) => {
     );
     await Habit.findOneAndUpdate(
       { userId: parseInt(req.params.userId) },
-      { habits },
+      { habits, trackerData },
       { new: true, upsert: true }
     );
     res.json({ success: true, user });
