@@ -5,17 +5,38 @@ const express = require('express');
 const cors = require('cors');
 const User = require('./models/User');
 const Payment = require('./models/Payment');
-
-// Bot va konfiguratsiya
-const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 const ADMIN_ID = parseInt(process.env.ADMIN_ID);
 const WEB_APP_URL = process.env.WEB_APP_URL;
 
-// Express server
-const app = express();
-app.use(cors());
-app.use(express.json());
+const bot = new TelegramBot(process.env.BOT_TOKEN);
 
+const WEBHOOK_URL = `${process.env.RENDER_URL}/bot${process.env.BOT_TOKEN}`;
+
+bot.setWebHook(WEBHOOK_URL);
+// Middleware'larni webhook route'dan OLDIN joylashtiring
+app.use(express.json({ limit: '10mb' }));  // Limitni 10MB ga oshirish
+app.use(cors({
+  origin: '*',  // Barcha origin'larni ruxsat berish (test uchun)
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+app.options('*', cors());  // Saqlang
+// Webhook callback route (middleware'lardan keyin)
+app.post(`/bot${process.env.BOT_TOKEN}`, (req, res) => {
+    try {
+        // Test uchun: req.body ni tekshiring (production'da olib tashlang)
+        if (!req.body) {
+            console.error('req.body is undefined');
+            res.sendStatus(200);
+            return;
+        }
+        bot.processUpdate(req.body);
+        res.sendStatus(200);
+    } catch (error) {
+        console.error('Webhook processing error:', error);
+        res.sendStatus(200); // Telegram'ga muvaffaqiyatli qabul qilindi deb bildirish
+    }
+});
 // MongoDB ulanish
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
