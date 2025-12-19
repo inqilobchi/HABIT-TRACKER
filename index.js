@@ -46,66 +46,65 @@ mongoose.connect(process.env.MONGO_URI, {
 }).then(() => console.log('MongoDB ulandi')).catch(err => console.error(err));
 
 // API Endpointlar
-     app.get('/api/user/:userId', async (req, res) => {
-       try {
-         const user = await User.findOne({ userId: parseInt(req.params.userId) });
-         const habit = await Habit.findOne({ userId: parseInt(req.params.userId) });
-         if (!user) return res.status(404).json({ error: 'User not found' });
-         res.json({
-           userPlan: user.plan,
-           stars: user.stars,
-           referralCount: user.referralCount,
-           referralCode: user.referralCode,
-           habits: habit ? habit.habits : [],
-           trackerData: habit ? habit.trackerData : {},  // Qo'shildi
-           theme: user.theme || 'midnight'
-         });
-       } catch (err) {
-         res.status(500).json({ error: err.message });
-       }
-     });
+app.get('/api/user/:userId', async (req, res) => {
+  try {
+    const user = await User.findOne({ userId: req.params.userId });  // Yangilandi (parseInt olib tashlandi)
+    const habit = await Habit.findOne({ userId: req.params.userId });  // Yangilandi
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({
+      userPlan: user.plan,
+      stars: user.stars,
+      referralCount: user.referralCount,
+      referralCode: user.referralCode,
+      habits: habit ? habit.habits : [],
+      trackerData: habit ? habit.trackerData : {},
+      theme: user.theme || 'midnight'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.post('/api/user/:userId', async (req, res) => {
-  console.log('POST /api/user/:userId called with:', req.body);  // Qo'shildi
+  console.log('POST /api/user/:userId called with:', req.body);
   try {
     const { userPlan, stars, referralCount, habits, trackerData, theme } = req.body;
     const user = await User.findOneAndUpdate(
-      { userId: parseInt(req.params.userId) },
+      { userId: req.params.userId },  // Yangilandi
       { plan: userPlan, stars, referralCount, theme },
       { new: true, upsert: true }
     );
     await Habit.findOneAndUpdate(
-      { userId: parseInt(req.params.userId) },
+      { userId: req.params.userId },  // Yangilandi
       { habits, trackerData },
       { new: true, upsert: true }
     );
-    console.log('User and Habit saved successfully');  // Qo'shildi
+    console.log('User and Habit saved successfully');
     res.json({ success: true, user });
   } catch (err) {
-    console.error('POST /api/user error:', err);  // Qo'shildi
+    console.error('POST /api/user error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 app.post('/api/sleep/:userId', async (req, res) => {
-  console.log('POST /api/sleep/:userId called with:', req.body);  // Qo'shildi
+  console.log('POST /api/sleep/:userId called with:', req.body);
   try {
     const { sleepData } = req.body;
     await Sleep.findOneAndUpdate(
-      { userId: parseInt(req.params.userId) },
+      { userId: req.params.userId },  // Yangilandi
       { sleepData },
       { new: true, upsert: true }
     );
-    console.log('Sleep saved successfully');  // Qo'shildi
+    console.log('Sleep saved successfully');
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /api/sleep error:', err);  // Qo'shildi
+    console.error('POST /api/sleep error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 app.get('/api/sleep/:userId', async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId);
-    const sleep = await Sleep.findOne({ userId });
+    const sleep = await Sleep.findOne({ userId: req.params.userId });  // Yangilandi
     res.json({
       sleepData: sleep ? sleep.sleepData : {}
     });
@@ -116,8 +115,7 @@ app.get('/api/sleep/:userId', async (req, res) => {
 });
 app.get('/api/habit/:userId', async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId);
-    const habit = await Habit.findOne({ userId });
+    const habit = await Habit.findOne({ userId: req.params.userId });  // Yangilandi
     res.json({
       habits: habit ? habit.habits : [],
       trackerData: habit ? habit.trackerData : {}
@@ -129,19 +127,18 @@ app.get('/api/habit/:userId', async (req, res) => {
 });
 
 app.post('/api/habit/:userId', async (req, res) => {
-  console.log('POST /api/habit/:userId called with:', req.body);  // Qo'shildi
+  console.log('POST /api/habit/:userId called with:', req.body);
   try {
-    const userId = parseInt(req.params.userId);
     const { habits, trackerData } = req.body;
     await Habit.findOneAndUpdate(
-      { userId },
+      { userId: req.params.userId },  // Yangilandi
       { habits, trackerData },
       { new: true, upsert: true }
     );
-    console.log('Habit saved successfully');  // Qo'shildi
+    console.log('Habit saved successfully');
     res.json({ success: true });
   } catch (err) {
-    console.error('POST /api/habit error:', err);  // Qo'shildi
+    console.error('POST /api/habit error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -159,7 +156,7 @@ async function getUser(userId) {
   let user = await User.findOne({ userId });
   if (!user) {
     user = new User({
-      userId,
+      userId: userId.toString(),  // Yangilandi
       referralCode: generateReferralCode()
     });
     await user.save();
@@ -180,7 +177,7 @@ function getMainKeyboard() {
 
 // /start kommandasi
 bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
-  const userId = msg.from.id;
+  const userId = msg.from.id.toString();
   const referralCode = match[1];
 
   const user = await getUser(userId);
@@ -203,7 +200,7 @@ bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
 
 // Callback query handler
 bot.on('callback_query', async (query) => {
-  const userId = query.from.id;
+  const userId = query.from.id.toString();
   const data = query.data;
   const user = await getUser(userId);
 
@@ -291,7 +288,7 @@ bot.on('callback_query', async (query) => {
 
 // Chek rasmini qabul qilish
 bot.on('photo', async (msg) => {
-  const userId = msg.from.id;
+  const userId = msg.from.id.toString();
   const photo = msg.photo[msg.photo.length - 1];
 
   const pendingPayment = await Payment.findOne({ userId, status: 'pending' });
@@ -315,7 +312,7 @@ bot.on('photo', async (msg) => {
 bot.onText(/\/approve_(\d+)_(\w+)/, async (msg, match) => {
   if (msg.from.id !== ADMIN_ID) return bot.sendMessage(msg.from.id, 'Faqat admin uchun.');
 
-  const targetUserId = parseInt(match[1]);
+  const targetUserId = match[1];
   const plan = match[2];
 
   const user = await User.findOne({ userId: targetUserId });
