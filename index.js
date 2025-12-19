@@ -43,7 +43,11 @@ app.post(`/bot${process.env.BOT_TOKEN}`, (req, res) => {
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
-}).then(() => console.log('MongoDB ulandi')).catch(err => console.error(err));
+}).then(() => { console.log('MongoDB ulandi');
+  User.collection.createIndex({ userId: 1 }, { unique: true });
+  Habit.collection.createIndex({ userId: 1 }, { unique: true });
+  Sleep.collection.createIndex({ userId: 1 }, { unique: true });
+  }).catch(err => console.error(err));
 
 // API Endpointlar
 app.get('/api/user/:userId', async (req, res) => {
@@ -134,11 +138,11 @@ app.get('/api/habit/:userId', async (req, res) => {
 app.post('/api/habit/:userId', async (req, res) => {
   console.log('POST /api/habit/:userId called with:', req.body);
   try {
-    const userId = parseInt(req.params.userId);  // Number
-    const { habits, trackerData } = req.body;
+    const userId = parseInt(req.params.userId);
+    const { trackerData } = req.body;
     await Habit.findOneAndUpdate(
       { userId },
-      { habits, trackerData },
+      { trackerData },
       { new: true, upsert: true }
     );
     console.log('Habit saved successfully');
