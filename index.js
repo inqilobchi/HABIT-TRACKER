@@ -203,7 +203,7 @@ bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
 
 // Callback query handler
 bot.on('callback_query', async (query) => {
-  const userId = parseInt(query.from.id);
+  const userId = query.from.id.toString();
   const data = query.data;
   const user = await getUser(userId);
 
