@@ -52,9 +52,8 @@ mongoose.connect(process.env.MONGO_URI, {
 // API Endpointlar
 app.get('/api/user/:userId', async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId);  // Number ga aylantirish
-    const user = await User.findOne({ userId });
-    const habit = await Habit.findOne({ userId });
+    const user = await User.findOne({ userId: parseInt(req.params.userId) });
+    const habit = await Habit.findOne({ userId: parseInt(req.params.userId) });
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({
       userPlan: user.plan,
@@ -62,7 +61,7 @@ app.get('/api/user/:userId', async (req, res) => {
       referralCount: user.referralCount,
       referralCode: user.referralCode,
       habits: habit ? habit.habits : [],
-      trackerData: habit ? habit.trackerData : {},
+      trackerData: habit ? habit.trackerData : {},  // Qo'shildi
       theme: user.theme || 'midnight'
     });
   } catch (err) {
