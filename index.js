@@ -48,8 +48,9 @@ mongoose.connect(process.env.MONGO_URI, {
 // API Endpointlar
 app.get('/api/user/:userId', async (req, res) => {
   try {
-    const user = await User.findOne({ userId: req.params.userId });  // Yangilandi (parseInt olib tashlandi)
-    const habit = await Habit.findOne({ userId: req.params.userId });  // Yangilandi
+    const userId = parseInt(req.params.userId);  // Number ga aylantirish
+    const user = await User.findOne({ userId });
+    const habit = await Habit.findOne({ userId });
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({
       userPlan: user.plan,
@@ -68,14 +69,15 @@ app.get('/api/user/:userId', async (req, res) => {
 app.post('/api/user/:userId', async (req, res) => {
   console.log('POST /api/user/:userId called with:', req.body);
   try {
+    const userId = parseInt(req.params.userId);  // Number
     const { userPlan, stars, referralCount, habits, trackerData, theme } = req.body;
     const user = await User.findOneAndUpdate(
-      { userId: req.params.userId },  // Yangilandi
+      { userId },
       { plan: userPlan, stars, referralCount, theme },
       { new: true, upsert: true }
     );
     await Habit.findOneAndUpdate(
-      { userId: req.params.userId },  // Yangilandi
+      { userId },
       { habits, trackerData },
       { new: true, upsert: true }
     );
@@ -89,9 +91,10 @@ app.post('/api/user/:userId', async (req, res) => {
 app.post('/api/sleep/:userId', async (req, res) => {
   console.log('POST /api/sleep/:userId called with:', req.body);
   try {
+    const userId = parseInt(req.params.userId);  // Number
     const { sleepData } = req.body;
     await Sleep.findOneAndUpdate(
-      { userId: req.params.userId },  // Yangilandi
+      { userId },
       { sleepData },
       { new: true, upsert: true }
     );
@@ -104,7 +107,8 @@ app.post('/api/sleep/:userId', async (req, res) => {
 });
 app.get('/api/sleep/:userId', async (req, res) => {
   try {
-    const sleep = await Sleep.findOne({ userId: req.params.userId });  // Yangilandi
+    const userId = parseInt(req.params.userId);  // Number
+    const sleep = await Sleep.findOne({ userId });
     res.json({
       sleepData: sleep ? sleep.sleepData : {}
     });
@@ -115,7 +119,8 @@ app.get('/api/sleep/:userId', async (req, res) => {
 });
 app.get('/api/habit/:userId', async (req, res) => {
   try {
-    const habit = await Habit.findOne({ userId: req.params.userId });  // Yangilandi
+    const userId = parseInt(req.params.userId);  // Number
+    const habit = await Habit.findOne({ userId });
     res.json({
       habits: habit ? habit.habits : [],
       trackerData: habit ? habit.trackerData : {}
@@ -129,9 +134,10 @@ app.get('/api/habit/:userId', async (req, res) => {
 app.post('/api/habit/:userId', async (req, res) => {
   console.log('POST /api/habit/:userId called with:', req.body);
   try {
+    const userId = parseInt(req.params.userId);  // Number
     const { habits, trackerData } = req.body;
     await Habit.findOneAndUpdate(
-      { userId: req.params.userId },  // Yangilandi
+      { userId },
       { habits, trackerData },
       { new: true, upsert: true }
     );
@@ -156,7 +162,7 @@ async function getUser(userId) {
   let user = await User.findOne({ userId });
   if (!user) {
     user = new User({
-      userId: userId.toString(),  // Yangilandi
+      userId: parseInt(userId),  // Number sifatida saqlash
       referralCode: generateReferralCode()
     });
     await user.save();
@@ -177,7 +183,7 @@ function getMainKeyboard() {
 
 // /start kommandasi
 bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
-  const userId = msg.from.id.toString();
+  const userId = parseInt(msg.from.id); 
   const referralCode = match[1];
 
   const user = await getUser(userId);
@@ -200,7 +206,7 @@ bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
 
 // Callback query handler
 bot.on('callback_query', async (query) => {
-  const userId = query.from.id.toString();
+  const userId = parseInt(query.from.id);
   const data = query.data;
   const user = await getUser(userId);
 
@@ -288,7 +294,7 @@ bot.on('callback_query', async (query) => {
 
 // Chek rasmini qabul qilish
 bot.on('photo', async (msg) => {
-  const userId = msg.from.id.toString();
+  const userId = parseInt(msg.from.id);
   const photo = msg.photo[msg.photo.length - 1];
 
   const pendingPayment = await Payment.findOne({ userId, status: 'pending' });
@@ -312,7 +318,7 @@ bot.on('photo', async (msg) => {
 bot.onText(/\/approve_(\d+)_(\w+)/, async (msg, match) => {
   if (msg.from.id !== ADMIN_ID) return bot.sendMessage(msg.from.id, 'Faqat admin uchun.');
 
-  const targetUserId = match[1];
+  const targetUserId = parseInt(match[1]);
   const plan = match[2];
 
   const user = await User.findOne({ userId: targetUserId });
