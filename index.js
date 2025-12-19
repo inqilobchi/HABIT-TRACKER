@@ -179,27 +179,27 @@ function getMainKeyboard() {
 }
 
 // /start kommandasi
-bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
-  const userId = msg.from.id.toString();
-  const referralCode = match[1];
+     bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
+       const userId = msg.from.id.toString();
+       const referralCode = match[1];
 
-  const user = await getUser(userId);
+       const user = await getUser(userId);
 
-  if (referralCode) {
-    const referrer = await User.findOne({ referralCode });
-    if (referrer && referrer.userId !== userId) {
-      referrer.referralCount += 1;
-      referrer.stars += 1000;
-      user.referrerId = referrer.userId;
-      await referrer.save();
-      await user.save();
-      bot.sendMessage(userId, 'Siz do\'st taklif qilgan orqali kirdingiz! Taklif qilgan do\'stingizga 1000 ⭐ qo\'shildi.');
-    }
-  }
+       if (referralCode && !user.referrerId) {  // Qo'shildi: agar referrerId yo'q bo'lsa
+         const referrer = await User.findOne({ referralCode });
+         if (referrer && referrer.userId !== userId) {
+           referrer.referralCount += 1;
+           referrer.stars += 1000;
+           user.referrerId = referrer.userId;
+           await referrer.save();
+           await user.save();
+           bot.sendMessage(userId, 'Siz do\'st taklif qilgan orqali kirdingiz! Taklif qilgan do\'stingizga 1000 ⭐ qo\'shildi.');
+         }
+       }
 
-  const message = `Salom! Habit Tracker botiga xush kelibsiz!\n\nSizning tarifi: ${user.plan}\nYulduzlar: ${user.stars} ⭐\nReferral soni: ${user.referralCount}`;
-  bot.sendMessage(userId, message, { reply_markup: getMainKeyboard() });
-});
+       const message = `Salom! Habit Tracker botiga xush kelibsiz!\n\nSizning tarifi: ${user.plan}\nYulduzlar: ${user.stars} ⭐\nReferral soni: ${user.referralCount}`;
+       bot.sendMessage(userId, message, { reply_markup: getMainKeyboard() });
+     });
 
 // Callback query handler
 bot.on('callback_query', async (query) => {
