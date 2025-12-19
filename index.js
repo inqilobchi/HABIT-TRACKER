@@ -52,8 +52,9 @@ mongoose.connect(process.env.MONGO_URI, {
 // API Endpointlar
 app.get('/api/user/:userId', async (req, res) => {
   try {
-    const user = await User.findOne({ userId: parseInt(req.params.userId) });
-    const habit = await Habit.findOne({ userId: parseInt(req.params.userId) });
+    const userId = req.params.userId;
+    const user = await User.findOne({ $or: [{ userId: userId }, { userId: parseInt(userId) }] });
+    const habit = await Habit.findOne({ $or: [{ userId: userId }, { userId: parseInt(userId) }] });
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({
       userPlan: user.plan,
@@ -61,7 +62,7 @@ app.get('/api/user/:userId', async (req, res) => {
       referralCount: user.referralCount,
       referralCode: user.referralCode,
       habits: habit ? habit.habits : [],
-      trackerData: habit ? habit.trackerData : {},  // Qo'shildi
+      trackerData: habit ? habit.trackerData : {},
       theme: user.theme || 'midnight'
     });
   } catch (err) {
@@ -70,38 +71,33 @@ app.get('/api/user/:userId', async (req, res) => {
 });
 
 app.post('/api/user/:userId', async (req, res) => {
-  console.log('POST /api/user/:userId called with:', req.body);
   try {
-    const userId = parseInt(req.params.userId);  // Number
+    const userId = req.params.userId;
     const { userPlan, stars, referralCount, habits, trackerData, theme } = req.body;
     const user = await User.findOneAndUpdate(
-      { userId },
+      { userId: userId },
       { plan: userPlan, stars, referralCount, theme },
       { new: true, upsert: true }
     );
     await Habit.findOneAndUpdate(
-      { userId },
+      { userId: userId },
       { habits, trackerData },
       { new: true, upsert: true }
     );
-    console.log('User and Habit saved successfully');
     res.json({ success: true, user });
   } catch (err) {
-    console.error('POST /api/user error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 app.post('/api/sleep/:userId', async (req, res) => {
-  console.log('POST /api/sleep/:userId called with:', req.body);
   try {
-    const userId = parseInt(req.params.userId);  // Number
     const { sleepData } = req.body;
+    const userId = req.params.userId;
     await Sleep.findOneAndUpdate(
       { userId },
       { sleepData },
       { new: true, upsert: true }
     );
-    console.log('Sleep saved successfully');
     res.json({ success: true });
   } catch (err) {
     console.error('POST /api/sleep error:', err);
@@ -110,8 +106,8 @@ app.post('/api/sleep/:userId', async (req, res) => {
 });
 app.get('/api/sleep/:userId', async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId);  // Number
-    const sleep = await Sleep.findOne({ userId });
+    const userId = req.params.userId;
+    const sleep = await Sleep.findOne({ $or: [{ userId }, { userId: parseInt(userId) }] });
     res.json({
       sleepData: sleep ? sleep.sleepData : {}
     });
@@ -122,8 +118,8 @@ app.get('/api/sleep/:userId', async (req, res) => {
 });
 app.get('/api/habit/:userId', async (req, res) => {
   try {
-    const userId = parseInt(req.params.userId);  // Number
-    const habit = await Habit.findOne({ userId });
+    const userId = req.params.userId;
+    const habit = await Habit.findOne({ $or: [{ userId }, { userId: parseInt(userId) }] });
     res.json({
       habits: habit ? habit.habits : [],
       trackerData: habit ? habit.trackerData : {}
@@ -135,16 +131,14 @@ app.get('/api/habit/:userId', async (req, res) => {
 });
 
 app.post('/api/habit/:userId', async (req, res) => {
-  console.log('POST /api/habit/:userId called with:', req.body);
   try {
-    const userId = parseInt(req.params.userId);
-    const { trackerData } = req.body;
+    const userId = req.params.userId;
+    const { habits, trackerData } = req.body;
     await Habit.findOneAndUpdate(
       { userId },
-      { trackerData },
+      { habits, trackerData },
       { new: true, upsert: true }
     );
-    console.log('Habit saved successfully');
     res.json({ success: true });
   } catch (err) {
     console.error('POST /api/habit error:', err);
@@ -165,7 +159,7 @@ async function getUser(userId) {
   let user = await User.findOne({ userId });
   if (!user) {
     user = new User({
-      userId: parseInt(userId),  // Number sifatida saqlash
+      userId: userId,
       referralCode: generateReferralCode()
     });
     await user.save();
@@ -186,7 +180,7 @@ function getMainKeyboard() {
 
 // /start kommandasi
 bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
-  const userId = parseInt(msg.from.id); 
+  const userId = msg.from.id.toString();
   const referralCode = match[1];
 
   const user = await getUser(userId);
