@@ -200,6 +200,127 @@ function getMainKeyboard() {
        const message = `Salom! Habit Tracker botiga xush kelibsiz!\n\nSizning tarifi: ${user.plan}\nYulduzlar: ${user.stars} ⭐\nReferral soni: ${user.referralCount}`;
        bot.sendMessage(userId, message, { reply_markup: getMainKeyboard() });
      });
+bot.onText(/\/admin/, async (msg) => {
+  if (msg.from.id !== ADMIN_ID) return;
+
+  const text = `
+🛠 ADMIN PANEL
+
+/statistics – Bugungi statistika
+/user [id] – Foydalanuvchi ma'lumotlari
+/setplan [id] [free|standard|premium]
+/ban [id]
+/unban [id]
+/delete [id]
+/addstars [id] [son]
+/payments – Kutilayotgan to‘lovlar
+/broadcast – Hammaga xabar
+/send [id] – Bitta foydalanuvchiga xabar
+`;
+
+  bot.sendMessage(msg.chat.id, text);
+});
+bot.onText(/\/stats/, async (msg) => {
+  if (msg.from.id !== ADMIN_ID) return;
+
+  const total = await User.countDocuments();
+  const active = await User.countDocuments({ banned: { $ne: true } });
+  const banned = await User.countDocuments({ banned: true });
+
+  bot.sendMessage(msg.chat.id,
+    `📊 Statistika:\n\n👥 Jami: ${total}\n✅ Faol: ${active}\n🚫 Bloklangan: ${banned}`
+  );
+});
+bot.onText(/\/user (\d+)/, async (msg, match) => {
+  if (msg.from.id !== ADMIN_ID) return;
+
+  const user = await User.findOne({ userId: match[1] });
+  if (!user) return bot.sendMessage(msg.chat.id, '❌ Topilmadi');
+
+  bot.sendMessage(msg.chat.id,
+    `👤 User: ${user.userId}
+📦 Plan: ${user.plan}
+⭐ Stars: ${user.stars}
+🎁 Referral: ${user.referralCount}
+🚫 Banned: ${user.banned ? 'Ha' : 'Yo‘q'}`
+  );
+});
+bot.onText(/\/setplan (\d+) (free|standard|premium)/, async (msg, match) => {
+  if (msg.from.id !== ADMIN_ID) return;
+
+  await User.findOneAndUpdate(
+    { userId: match[1] },
+    { plan: match[2] }
+  );
+
+  bot.sendMessage(msg.chat.id, `✅ Tarif ${match[2]} ga o‘zgartirildi`);
+});
+bot.onText(/\/ban (\d+)/, async (msg, match) => {
+  if (msg.from.id !== ADMIN_ID) return;
+  await User.findOneAndUpdate({ userId: match[1] }, { banned: true });
+  bot.sendMessage(msg.chat.id, '🚫 Foydalanuvchi bloklandi');
+});
+
+bot.onText(/\/unban (\d+)/, async (msg, match) => {
+  if (msg.from.id !== ADMIN_ID) return;
+  await User.findOneAndUpdate({ userId: match[1] }, { banned: false });
+  bot.sendMessage(msg.chat.id, '✅ Blokdan chiqarildi');
+});
+bot.onText(/\/delete (\d+)/, async (msg, match) => {
+  if (msg.from.id !== ADMIN_ID) return;
+
+  await User.deleteOne({ userId: match[1] });
+  await Habit.deleteOne({ userId: match[1] });
+  await Sleep.deleteOne({ userId: match[1] });
+
+  bot.sendMessage(msg.chat.id, '🗑 Foydalanuvchi o‘chirildi');
+});
+bot.onText(/\/addstars (\d+) (\d+)/, async (msg, match) => {
+  if (msg.from.id !== ADMIN_ID) return;
+
+  await User.findOneAndUpdate(
+    { userId: match[1] },
+    { $inc: { stars: parseInt(match[2]) } }
+  );
+
+  bot.sendMessage(msg.chat.id, `⭐ ${match[2]} yulduz qo‘shildi`);
+});
+bot.onText(/\/payments/, async (msg) => {
+  if (msg.from.id !== ADMIN_ID) return;
+
+  const payments = await Payment.find({ status: 'pending' });
+  if (!payments.length) return bot.sendMessage(msg.chat.id, 'To‘lov yo‘q');
+
+  payments.forEach(p => {
+    bot.sendMessage(msg.chat.id,
+      `💳 ID: ${p._id}
+👤 User: ${p.userId}
+📦 Plan: ${p.plan}
+💰 ${p.amount} so'm`
+    );
+  });
+});
+bot.onText(/\/broadcast/, async (msg) => {
+  if (msg.from.id !== ADMIN_ID) return;
+
+  bot.once('message', async (m) => {
+    const users = await User.find();
+    users.forEach(u => {
+      bot.sendMessage(u.userId, m.text).catch(() => {});
+    });
+  });
+
+  bot.sendMessage(msg.chat.id, '✍️ Xabarni yuboring');
+});
+bot.onText(/\/send (\d+)/, async (msg, match) => {
+  if (msg.from.id !== ADMIN_ID) return;
+
+  bot.once('message', (m) => {
+    bot.sendMessage(match[1], m.text);
+  });
+
+  bot.sendMessage(msg.chat.id, '✍️ Xabarni yozing');
+});
 
 // Callback query handler
 bot.on('callback_query', async (query) => {
