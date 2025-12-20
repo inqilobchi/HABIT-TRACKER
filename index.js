@@ -160,11 +160,16 @@ async function getUser(userId) {
   if (!user) {
     user = new User({
       userId: userId,
-      referralCode: generateReferralCode()
+      referralCode: generateReferralCode(),
+      isAdmin: parseInt(userId) === ADMIN_ID
     });
     await user.save();
   }
   return user;
+}
+async function isAdmin(userId) {
+  const user = await User.findOne({ userId });
+  return user?.isAdmin === true;
 }
 
 function getMainKeyboard() {
@@ -216,12 +221,14 @@ bot.onText(/\/admin/, async (msg) => {
 /payments – Kutilayotgan to‘lovlar
 /broadcast – Hammaga xabar
 /send [id] – Bitta foydalanuvchiga xabar
+/addadmin [id] - Admin qo'shish
+/removeadmin [id] - Adminlikdan olish
 `;
 
   bot.sendMessage(msg.chat.id, text);
 });
 bot.onText(/\/stats/, async (msg) => {
-  if (msg.from.id !== ADMIN_ID) return;
+  if (!(await isAdmin(msg.from.id))) return;
 
   const total = await User.countDocuments();
   const active = await User.countDocuments({ banned: { $ne: true } });
@@ -232,7 +239,7 @@ bot.onText(/\/stats/, async (msg) => {
   );
 });
 bot.onText(/\/user (\d+)/, async (msg, match) => {
-  if (msg.from.id !== ADMIN_ID) return;
+  if (!(await isAdmin(msg.from.id))) return;
 
   const user = await User.findOne({ userId: match[1] });
   if (!user) return bot.sendMessage(msg.chat.id, '❌ Topilmadi');
@@ -246,7 +253,7 @@ bot.onText(/\/user (\d+)/, async (msg, match) => {
   );
 });
 bot.onText(/\/setplan (\d+) (free|standard|premium)/, async (msg, match) => {
-  if (msg.from.id !== ADMIN_ID) return;
+  if (!(await isAdmin(msg.from.id))) return;
 
   await User.findOneAndUpdate(
     { userId: match[1] },
@@ -256,7 +263,7 @@ bot.onText(/\/setplan (\d+) (free|standard|premium)/, async (msg, match) => {
   bot.sendMessage(msg.chat.id, `✅ Tarif ${match[2]} ga o‘zgartirildi`);
 });
 bot.onText(/\/ban (\d+)/, async (msg, match) => {
-  if (msg.from.id !== ADMIN_ID) return;
+  if (!(await isAdmin(msg.from.id))) return;
   await User.findOneAndUpdate({ userId: match[1] }, { banned: true });
   bot.sendMessage(msg.chat.id, '🚫 Foydalanuvchi bloklandi');
 });
@@ -267,7 +274,7 @@ bot.onText(/\/unban (\d+)/, async (msg, match) => {
   bot.sendMessage(msg.chat.id, '✅ Blokdan chiqarildi');
 });
 bot.onText(/\/delete (\d+)/, async (msg, match) => {
-  if (msg.from.id !== ADMIN_ID) return;
+  if (!(await isAdmin(msg.from.id))) return;
 
   await User.deleteOne({ userId: match[1] });
   await Habit.deleteOne({ userId: match[1] });
@@ -276,7 +283,7 @@ bot.onText(/\/delete (\d+)/, async (msg, match) => {
   bot.sendMessage(msg.chat.id, '🗑 Foydalanuvchi o‘chirildi');
 });
 bot.onText(/\/addstars (\d+) (\d+)/, async (msg, match) => {
-  if (msg.from.id !== ADMIN_ID) return;
+  if (!(await isAdmin(msg.from.id))) return;
 
   await User.findOneAndUpdate(
     { userId: match[1] },
@@ -286,7 +293,7 @@ bot.onText(/\/addstars (\d+) (\d+)/, async (msg, match) => {
   bot.sendMessage(msg.chat.id, `⭐ ${match[2]} yulduz qo‘shildi`);
 });
 bot.onText(/\/payments/, async (msg) => {
-  if (msg.from.id !== ADMIN_ID) return;
+  if (!(await isAdmin(msg.from.id))) return;
 
   const payments = await Payment.find({ status: 'pending' });
   if (!payments.length) return bot.sendMessage(msg.chat.id, 'To‘lov yo‘q');
@@ -301,7 +308,7 @@ bot.onText(/\/payments/, async (msg) => {
   });
 });
 bot.onText(/\/broadcast/, async (msg) => {
-  if (msg.from.id !== ADMIN_ID) return;
+  if (!(await isAdmin(msg.from.id))) return;
 
   bot.once('message', async (m) => {
     const users = await User.find();
@@ -313,13 +320,44 @@ bot.onText(/\/broadcast/, async (msg) => {
   bot.sendMessage(msg.chat.id, '✍️ Xabarni yuboring');
 });
 bot.onText(/\/send (\d+)/, async (msg, match) => {
-  if (msg.from.id !== ADMIN_ID) return;
+  if (!(await isAdmin(msg.from.id))) return;
 
   bot.once('message', (m) => {
     bot.sendMessage(match[1], m.text);
   });
 
   bot.sendMessage(msg.chat.id, '✍️ Xabarni yozing');
+});
+bot.onText(/\/addadmin (\d+)/, async (msg, match) => {
+  if (msg.from.id !== ADMIN_ID) {
+    return bot.sendMessage(msg.chat.id, '❌ Faqat super admin qo‘sha oladi');
+  }
+
+  const targetId = parseInt(match[1]);
+  const user = await getUser(targetId);
+
+  if (user.isAdmin) {
+    return bot.sendMessage(msg.chat.id, '⚠️ Bu foydalanuvchi allaqachon admin');
+  }
+
+  user.isAdmin = true;
+  await user.save();
+
+  bot.sendMessage(msg.chat.id, `✅ ${targetId} admin qilindi`);
+  bot.sendMessage(targetId, '🎉 Siz admin bo‘ldingiz!');
+});
+bot.onText(/\/removeadmin (\d+)/, async (msg, match) => {
+  if (msg.from.id !== ADMIN_ID) return;
+
+  const user = await User.findOne({ userId: match[1] });
+  if (!user || !user.isAdmin) {
+    return bot.sendMessage(msg.chat.id, '❌ Admin topilmadi');
+  }
+
+  user.isAdmin = false;
+  await user.save();
+
+  bot.sendMessage(msg.chat.id, '✅ Admin olib tashlandi');
 });
 
 // Callback query handler
