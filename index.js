@@ -232,7 +232,7 @@ bot.onText(/\/admin/, async (msg) => {
   const text = `
 🛠 ADMIN PANEL
 
-/statistics – Bugungi statistika
+/stats – Bugungi statistika
 /user [id] – Foydalanuvchi ma'lumotlari
 /setplan [id] [free|standard|premium]
 /ban [id]
