@@ -388,7 +388,7 @@ bot.on('callback_query', async (query) => {
   const user = await getUser(userId);
 
   if (data === 'referral') {
-    const link = `https://t.me/Tracker677bot?start=${user.referralCode}`;
+    const link = `https://t.me/uzkaizen_bot?start=${user.referralCode}`;
     let message = `🎁 Do\'stlarni taklif qiling!\n\nSizning kodingiz: ${user.referralCode}\nLink: ${link}\n\nHar do\'st uchun 1000 ⭐\nReferral soni: ${user.referralCount}`;
 
     const keyboard = { inline_keyboard: [] };
