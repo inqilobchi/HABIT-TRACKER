@@ -191,6 +191,7 @@ function getMainKeyboard() {
   return {
     inline_keyboard: [
       [{ text: '🚀 Boshlash', web_app: { url: WEB_APP_URL } }],
+      [{text: 'PDF Planner', url:'https://t.me/+FofvFHDRrzBiYmMy'}],
       [{ text: '🎁 Referral', callback_data: 'referral' }],
       [{ text: '💳 To\'lovlar', callback_data: 'payments' }],
       [{ text: '❓ Yordam', callback_data: 'help' }]
