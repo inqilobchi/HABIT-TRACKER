@@ -145,7 +145,22 @@ app.post('/api/habit/:userId', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    // Bloklangan foydalanuvchilarni chiqarmaymiz, top 10 ni stars bo'yicha tartiblaymiz
+    const users = await User.find({ banned: { $ne: true } }).sort({ stars: -1 }).limit(10);
+    const leaderboard = users.map(user => ({
+      name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || 'Noma\'lum',
+      stars: user.stars,
+      streak: 0, // Streak hozircha 0; agar kerak bo'lsa, Habit modelidan hisoblang
+      plan: user.plan,
+      avatar: '👤' // Default avatar; Telegramdan olish uchun qo'shimcha API kerak
+    }));
+    res.json(leaderboard);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // Server ishga tushirish
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`API server ${PORT} portda ishlayapti`));
@@ -184,27 +199,33 @@ function getMainKeyboard() {
 }
 
 // /start kommandasi
-     bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
-       const userId = msg.from.id.toString();
-       const referralCode = match[1];
+bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
+  const userId = msg.from.id.toString();
+  const referralCode = match[1];
 
-       const user = await getUser(userId);
+  const user = await getUser(userId);
 
-       if (referralCode && !user.referrerId) {  // Qo'shildi: agar referrerId yo'q bo'lsa
-         const referrer = await User.findOne({ referralCode });
-         if (referrer && referrer.userId !== userId) {
-           referrer.referralCount += 1;
-           referrer.stars += 1000;
-           user.referrerId = referrer.userId;
-           await referrer.save();
-           await user.save();
-           bot.sendMessage(userId, 'Siz do\'st taklif qilgan orqali kirdingiz! Taklif qilgan do\'stingizga 1000 ⭐ qo\'shildi.');
-         }
-       }
+  // Yangi: Telegramdan ma'lumotlarni saqlash
+  user.firstName = msg.from.first_name || '';
+  user.lastName = msg.from.last_name || '';
+  user.username = msg.from.username || '';
+  await user.save();
 
-       const message = `Salom! Habit Tracker botiga xush kelibsiz!\n\nSizning tarifi: ${user.plan}\nYulduzlar: ${user.stars} ⭐\nReferral soni: ${user.referralCount}`;
-       bot.sendMessage(userId, message, { reply_markup: getMainKeyboard() });
-     });
+  if (referralCode && !user.referrerId) {
+    const referrer = await User.findOne({ referralCode });
+    if (referrer && referrer.userId !== userId) {
+      referrer.referralCount += 1;
+      referrer.stars += 1000;
+      user.referrerId = referrer.userId;
+      await referrer.save();
+      await user.save();
+      bot.sendMessage(userId, 'Siz do\'st taklif qilgan orqali kirdingiz! Taklif qilgan do\'stingizga 1000 ⭐ qo\'shildi.');
+    }
+  }
+
+  const message = `Salom! Habit Tracker botiga xush kelibsiz!\n\nSizning tarifi: ${user.plan}\nYulduzlar: ${user.stars} ⭐\nReferral soni: ${user.referralCount}`;
+  bot.sendMessage(userId, message, { reply_markup: getMainKeyboard() });
+});
 bot.onText(/\/admin/, async (msg) => {
   if (msg.from.id !== ADMIN_ID) return;
 
