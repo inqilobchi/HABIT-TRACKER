@@ -416,7 +416,7 @@ bot.on('callback_query', async (query) => {
     bot.sendMessage(userId, message);
   } else if (data === 'buy_standard') {
     const amount = 5000;
-    const message = `💳 Standart tarif uchun to'lov:\n\nKarta raqami: 9860080159543810\nMiqdori: ${amount} so'm\n\nTo'lov qiling va chekning screenshot-ini yuboring.`;
+    const message = `💳 Standart tarif uchun to'lov:\n\nKarta raqami: 9860350141353374\nMiqdori: ${amount} so'm\n\nTo'lov qiling va chekning screenshot-ini yuboring.`;
     const keyboard = {
       inline_keyboard: [
         [{ text: '❌ Bekor qilish', callback_data: 'cancel_payment' }]
