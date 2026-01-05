@@ -427,7 +427,7 @@ bot.on('callback_query', async (query) => {
     await Payment.create({ userId, plan: 'standard', amount });
   } else if (data === 'buy_premium') {
     const amount = 10000;
-    const message = `💳 Premium tarif uchun to'lov:\n\nKarta raqami: 9860080159543810\nMiqdori: ${amount} so'm\n\nTo'lov qiling va chekning screenshot-ini yuboring.`;
+    const message = `💳 Premium tarif uchun to'lov:\n\nKarta raqami: 9860350141353374\nMiqdori: ${amount} so'm\n\nTo'lov qiling va chekning screenshot-ini yuboring.`;
     const keyboard = {
       inline_keyboard: [
         [{ text: '❌ Bekor qilish', callback_data: 'cancel_payment' }]
