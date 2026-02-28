@@ -191,7 +191,7 @@ function getMainKeyboard() {
   return {
     inline_keyboard: [
       [{ text: '🚀 Boshlash', web_app: { url: WEB_APP_URL } }],
-      [{text: 'PDF Planner', url:'https://t.me/+FofvFHDRrzBiYmMy'}],
+      [{text: '🔖 Hamkor', url:'https://t.me/fa_live'}],
       [{ text: '🎁 Referral', callback_data: 'referral' }],
       [{ text: '💳 To\'lovlar', callback_data: 'payments' }],
       [{ text: '❓ Yordam', callback_data: 'help' }]
@@ -416,7 +416,7 @@ bot.on('callback_query', async (query) => {
     bot.sendMessage(userId, message);
   } else if (data === 'buy_standard') {
     const amount = 5000;
-    const message = `💳 Standart tarif uchun to'lov:\n\nKarta raqami: 9860350141353374\nMiqdori: ${amount} so'm\n\nTo'lov qiling va chekning screenshot-ini yuboring.`;
+    const message = `💳 Standart tarif uchun to'lov:\n\nKarta raqami: 98601201671864**\nMiqdori: ${amount} so'm\n\nTo'lov qiling va chekning screenshot-ini yuboring.`;
     const keyboard = {
       inline_keyboard: [
         [{ text: '❌ Bekor qilish', callback_data: 'cancel_payment' }]
@@ -427,7 +427,7 @@ bot.on('callback_query', async (query) => {
     await Payment.create({ userId, plan: 'standard', amount });
   } else if (data === 'buy_premium') {
     const amount = 10000;
-    const message = `💳 Premium tarif uchun to'lov:\n\nKarta raqami: 9860350141353374\nMiqdori: ${amount} so'm\n\nTo'lov qiling va chekning screenshot-ini yuboring.`;
+    const message = `💳 Premium tarif uchun to'lov:\n\nKarta raqami: 98601201671864**\nMiqdori: ${amount} so'm\n\nTo'lov qiling va chekning screenshot-ini yuboring.`;
     const keyboard = {
       inline_keyboard: [
         [{ text: '❌ Bekor qilish', callback_data: 'cancel_payment' }]
