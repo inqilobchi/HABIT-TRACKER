@@ -224,7 +224,7 @@ bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
     }
   }
 
-  const message = `Salom! Habit Tracker botiga xush kelibsiz!\n\nSizning tarifi: ${user.plan}\nYulduzlar: ${user.stars} ⭐\nReferral soni: ${user.referralCount}`;
+  const message = `<b>Salom! Kundalik rejalar botiga xush kelibsiz!\n\nSizning tarifi: ${user.plan}\nYulduzlar: ${user.stars} ⭐\nReferral soni: ${user.referralCount}</b>`;
   bot.sendMessage(userId, message, { reply_markup: getMainKeyboard() });
 });
 bot.onText(/\/admin/, async (msg) => {
