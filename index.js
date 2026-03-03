@@ -225,7 +225,7 @@ bot.onText(/\/start(?: (.+))?/, async (msg, match) => {
   }
 
   const message = `<b>Salom! Kundalik rejalar botiga xush kelibsiz!\n\nSizning tarifi: ${user.plan}\nYulduzlar: ${user.stars} ⭐\nReferral soni: ${user.referralCount}</b>`;
-  bot.sendMessage(userId, message, { reply_markup: getMainKeyboard() });
+  bot.sendMessage(userId, message, { parse_mode : "HTML", reply_markup: getMainKeyboard() });
 });
 bot.onText(/\/admin/, async (msg) => {
   if (msg.from.id !== ADMIN_ID) return;
